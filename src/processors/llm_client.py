@@ -8,6 +8,7 @@ API仕様は https://googleapis.github.io/python-genai/ (2026-08-18確認) に�
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from typing import TypeVar
 
 import structlog
@@ -22,6 +23,11 @@ from src.config import get_settings
 logger = structlog.get_logger(__name__)
 
 SchemaT = TypeVar("SchemaT", bound=BaseModel)
+
+# Phase6: 呼び出し1回ごとのトークン使用量を受け取るコールバック。コスト計測(llm_cost_log)は
+# processors配下からsrc.storeへ直接依存させたくない（依存方向はscrapers/processors/harness/
+# publishers -> store の一方向。CLAUDE.md第3章）ため、呼び出し側(パイプライン層)が注入する。
+UsageCallback = Callable[[str, int, int], Awaitable[None]]
 
 
 class MissingApiKeyError(RuntimeError):
@@ -49,9 +55,17 @@ def get_client() -> genai.Client:
     retry=retry_if_exception_type(APIError),
 )
 async def generate_structured(
-    prompt: str, response_schema: type[SchemaT], *, model: str | None = None
+    prompt: str,
+    response_schema: type[SchemaT],
+    *,
+    model: str | None = None,
+    on_usage: UsageCallback | None = None,
 ) -> SchemaT:
-    """プロンプトを送りPydanticスキーマに沿った構造化出力を取得する。"""
+    """プロンプトを送りPydanticスキーマに沿った構造化出力を取得する。
+
+    on_usage が渡された場合、呼び出し成功後に (model, input_tokens, output_tokens) で
+    通知する（コスト記録用。失敗時は呼ばない）。
+    """
     client = get_client()
     resolved_model = model or get_settings().google_genai_model
     response = await client.aio.models.generate_content(
@@ -66,4 +80,11 @@ async def generate_structured(
     if not isinstance(parsed, response_schema):
         logger.error("llm_response_parse_failed", model=resolved_model, raw_text=response.text)
         raise ValueError("LLM応答を期待したスキーマにパースできませんでした")
+
+    if on_usage is not None:
+        usage = getattr(response, "usage_metadata", None)
+        input_tokens = getattr(usage, "prompt_token_count", 0) or 0
+        output_tokens = getattr(usage, "candidates_token_count", 0) or 0
+        await on_usage(resolved_model, input_tokens, output_tokens)
+
     return parsed

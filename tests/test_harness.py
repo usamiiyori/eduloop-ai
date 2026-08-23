@@ -290,7 +290,7 @@ class TestSelfRepairLoop:
             )
             return fixed
 
-        runs, passed = await run_with_self_repair(bad_context, regenerate=regenerate)
+        runs, passed, _final = await run_with_self_repair(bad_context, regenerate=regenerate)
 
         assert passed is True
         assert len(runs) == 2  # 1回目失敗 → 再生成 → 2回目成功
@@ -307,7 +307,7 @@ class TestSelfRepairLoop:
         async def regenerate_that_never_fixes(context: HarnessContext, failed):  # noqa: ANN001, ANN201
             return bad_context
 
-        runs, passed = await run_with_self_repair(
+        runs, passed, _final = await run_with_self_repair(
             bad_context, regenerate=regenerate_that_never_fixes
         )
 
@@ -317,6 +317,6 @@ class TestSelfRepairLoop:
 
     async def test_single_pass_without_regenerate_callback(self) -> None:
         context = make_context()
-        runs, passed = await run_with_self_repair(context, regenerate=None)
+        runs, passed, _final = await run_with_self_repair(context, regenerate=None)
         assert passed is True
         assert len(runs) == 1

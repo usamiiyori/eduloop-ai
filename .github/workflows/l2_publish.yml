@@ -1,0 +1,30 @@
+name: L2 承認済み記事の配信（日次）
+
+on:
+  schedule:
+    - cron: "0 21 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: l2-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      CONTACT_URL: ${{ secrets.CONTACT_URL }}
+      NOTE_URL: ${{ secrets.NOTE_URL }}
+      X_PUBLISH_MODE: ${{ secrets.X_PUBLISH_MODE }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install .
+      - run: python -m src.pipeline.l2_publish

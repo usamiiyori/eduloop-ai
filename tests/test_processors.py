@@ -156,6 +156,11 @@ class TestGenerateWebArticleIntegration:
                 raw_document, context, citation
             )
 
+        # citation_idsはcitation自身のid(citations.idに対応)を参照する必要がある。
+        # raw_document_idを誤って使っていたPhase4のバグの再発防止(Phase6で修正)。
+        assert draft.key_points.citation_ids == [citation.id]
+        assert structure_raw["citation_ids"] == [citation.id]
+
         harness_context = HarnessContext(
             draft=draft,
             body_text=structure_raw["body_markdown"],

@@ -45,10 +45,13 @@ async def run_gates(context: HarnessContext) -> list[GateResult]:
 
 async def run_with_self_repair(
     context: HarnessContext, regenerate: RegenerateFn | None = None
-) -> tuple[list[HarnessRun], bool]:
+) -> tuple[list[HarnessRun], bool, HarnessContext]:
     """全ゲート通過するまで、最大 MAX_ATTEMPTS 回リトライする。
 
-    戻り値: (各試行のHarnessRunのリスト, 最終的に全ゲート通過したか)。
+    戻り値: (各試行のHarnessRunのリスト, 最終的に全ゲート通過したか, 最終的に検証された
+    HarnessContext)。3つ目の戻り値は、regenerateによって内容が更新された場合、その最終版の
+    draft/structure_raw を呼び出し側が永続化できるようにするため
+    （CLAUDE.md第3章: 検証済みの内容だけを次工程に渡す）。
     False の場合、呼び出し側は該当Draftのstatusを needs_human に更新すること。
     """
     runs: list[HarnessRun] = []
@@ -60,9 +63,9 @@ async def run_with_self_repair(
         runs.append(run)
 
         if run.all_passed:
-            return runs, True
+            return runs, True, current
         if attempt == MAX_ATTEMPTS or regenerate is None:
             break
         current = await regenerate(current, run.failed_gates)
 
-    return runs, False
+    return runs, False, current

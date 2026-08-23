@@ -46,6 +46,7 @@ class RawDocument(BaseModel):
 class Citation(BaseModel):
     """SIST02（科学技術情報流通技術基準）準拠の書誌情報。"""
 
+    id: UUID = Field(default_factory=uuid4)
     raw_document_id: UUID
     author_or_organization: str
     title: str

@@ -35,6 +35,19 @@ class Settings(BaseSettings):
 
     discord_webhook_url: str = Field(default="", alias="DISCORD_WEBHOOK_URL")
     slack_webhook_url: str = Field(default="", alias="SLACK_WEBHOOK_URL")
+    review_app_url: str = Field(
+        default="https://usamiiyori.github.io/eduloop-ai/", alias="REVIEW_APP_URL"
+    )
+    contact_url: str = Field(
+        default="",
+        alias="CONTACT_URL",
+        description="Web記事末尾の問い合わせ導線に使うURL。未設定の場合は導線を追記しない。",
+    )
+    note_url: str = Field(
+        default="",
+        alias="NOTE_URL",
+        description="note有料マガジンのURL。未設定の場合はnote導線を追記しない。",
+    )
 
     x_api_key: str = Field(default="", alias="X_API_KEY")
     x_api_secret: str = Field(default="", alias="X_API_SECRET")

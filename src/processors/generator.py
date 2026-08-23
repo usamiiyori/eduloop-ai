@@ -15,7 +15,7 @@ from src.models.draft import Draft, DraftFormat, KeyPoints
 from src.models.primary_source import Citation, RawDocument
 from src.processors import prompt_builder
 from src.processors.context import ContextBundle
-from src.processors.llm_client import generate_structured
+from src.processors.llm_client import UsageCallback, generate_structured
 from src.processors.schemas import ExtractionOutput, XThreadOutput, YouTubeScriptOutput
 
 
@@ -35,9 +35,17 @@ def assemble_web_article_markdown(
     )
 
 
-async def extract_key_points(raw_document: RawDocument, context: ContextBundle) -> ExtractionOutput:
-    prompt = prompt_builder.build_extraction_prompt(raw_document, context)
-    return await generate_structured(prompt, ExtractionOutput)
+async def extract_key_points(
+    raw_document: RawDocument,
+    context: ContextBundle,
+    *,
+    prior_failures: list[str] | None = None,
+    on_usage: UsageCallback | None = None,
+) -> ExtractionOutput:
+    prompt = prompt_builder.build_extraction_prompt(
+        raw_document, context, prior_failures=prior_failures
+    )
+    return await generate_structured(prompt, ExtractionOutput, on_usage=on_usage)
 
 
 def _build_draft(
@@ -62,11 +70,18 @@ def _build_draft(
 
 
 async def generate_web_article(
-    raw_document: RawDocument, context: ContextBundle, citation: Citation
+    raw_document: RawDocument,
+    context: ContextBundle,
+    citation: Citation,
+    *,
+    prior_failures: list[str] | None = None,
+    on_usage: UsageCallback | None = None,
 ) -> tuple[Draft, dict[str, object]]:
-    extraction = await extract_key_points(raw_document, context)
+    extraction = await extract_key_points(
+        raw_document, context, prior_failures=prior_failures, on_usage=on_usage
+    )
     draft = _build_draft(
-        raw_document, extraction, DraftFormat.WEB_ARTICLE, citation.raw_document_id
+        raw_document, extraction, DraftFormat.WEB_ARTICLE, citation.id
     )
     body_markdown = assemble_web_article_markdown(extraction, context, citation.to_sist02())
     structure_raw: dict[str, object] = {
@@ -74,19 +89,23 @@ async def generate_web_article(
         "title": raw_document.title,
         "slug": _slug_for(raw_document),
         "body_markdown": body_markdown,
-        "citation_ids": [citation.raw_document_id],
+        "citation_ids": [citation.id],
         "utm_campaign": _slug_for(raw_document),
     }
     return draft, structure_raw
 
 
 async def generate_x_thread(
-    raw_document: RawDocument, context: ContextBundle, citation: Citation
+    raw_document: RawDocument,
+    context: ContextBundle,
+    citation: Citation,
+    *,
+    on_usage: UsageCallback | None = None,
 ) -> tuple[Draft, dict[str, object]]:
-    extraction = await extract_key_points(raw_document, context)
-    draft = _build_draft(raw_document, extraction, DraftFormat.X_THREAD, citation.raw_document_id)
+    extraction = await extract_key_points(raw_document, context, on_usage=on_usage)
+    draft = _build_draft(raw_document, extraction, DraftFormat.X_THREAD, citation.id)
     prompt = prompt_builder.build_x_thread_prompt(extraction, context)
-    thread = await generate_structured(prompt, XThreadOutput)
+    thread = await generate_structured(prompt, XThreadOutput, on_usage=on_usage)
     structure_raw: dict[str, object] = {
         "draft_id": draft.id,
         "posts": [{"order_index": i, "text": t} for i, t in enumerate(thread.posts)],
@@ -95,14 +114,18 @@ async def generate_x_thread(
 
 
 async def generate_youtube_script(
-    raw_document: RawDocument, context: ContextBundle, citation: Citation
+    raw_document: RawDocument,
+    context: ContextBundle,
+    citation: Citation,
+    *,
+    on_usage: UsageCallback | None = None,
 ) -> tuple[Draft, dict[str, object]]:
-    extraction = await extract_key_points(raw_document, context)
+    extraction = await extract_key_points(raw_document, context, on_usage=on_usage)
     draft = _build_draft(
-        raw_document, extraction, DraftFormat.YOUTUBE_SCRIPT, citation.raw_document_id
+        raw_document, extraction, DraftFormat.YOUTUBE_SCRIPT, citation.id
     )
     prompt = prompt_builder.build_youtube_script_prompt(extraction, context)
-    script = await generate_structured(prompt, YouTubeScriptOutput)
+    script = await generate_structured(prompt, YouTubeScriptOutput, on_usage=on_usage)
     structure_raw: dict[str, object] = {
         "draft_id": draft.id,
         "script_text": script.script_text,

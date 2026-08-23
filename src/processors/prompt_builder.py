@@ -38,7 +38,24 @@ def _context_injection(context: ContextBundle) -> str:
     )
 
 
-def build_extraction_prompt(raw_document: RawDocument, context: ContextBundle) -> str:
+def _self_repair_injection(prior_failures: list[str] | None) -> str:
+    """自己修復ループ（最大3回リトライ）で、前回失敗したゲートの理由をプロンプトに再注入する
+    （docs/ARCHITECTURE.md 2.3節）。"""
+    if not prior_failures:
+        return ""
+    joined = "\n".join(f"- {reason}" for reason in prior_failures)
+    return (
+        "## 前回の生成で指摘された問題点（今回は必ず解消すること）\n"
+        f"{joined}\n\n"
+    )
+
+
+def build_extraction_prompt(
+    raw_document: RawDocument,
+    context: ContextBundle,
+    *,
+    prior_failures: list[str] | None = None,
+) -> str:
     """Fact/Implication/Discussion抽出＋ネタ選定スコアリングのプロンプトを組み立てる。"""
     return (
         "あなたは教育現場向けに一次情報を翻訳するアシスタントです。以下の一次情報から、"
@@ -46,6 +63,7 @@ def build_extraction_prompt(raw_document: RawDocument, context: ContextBundle) -
         "記事化の優先度スコアを付けてください。\n\n"
         f"{_voice_instructions(context)}\n"
         f"{_context_injection(context)}\n"
+        f"{_self_repair_injection(prior_failures)}"
         "## 一次情報\n"
         f"タイトル: {raw_document.title}\n"
         f"出典URL: {raw_document.url}\n"

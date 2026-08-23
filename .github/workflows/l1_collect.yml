@@ -1,0 +1,35 @@
+name: L1 収集・生成・検証（毎時）
+
+# 毎時cronは意図的にまだ有効化していない: SCRAPER_CONTACT_URL（収集先サイトの管理者への
+# 連絡先。robots.txt遵守のマナー）がオーナー未確定のため。決まり次第 `schedule:` を追加する
+# （docs/ROADMAP.md「未確認事項」参照）。それまではworkflow_dispatchでの手動実行のみ。
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: l1-collect
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      GOOGLE_GENAI_API_KEY: ${{ secrets.GOOGLE_GENAI_API_KEY }}
+      GOOGLE_GENAI_MODEL: ${{ secrets.GOOGLE_GENAI_MODEL }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      SCRAPER_CONTACT_URL: ${{ secrets.SCRAPER_CONTACT_URL }}
+      REVIEW_APP_URL: ${{ secrets.REVIEW_APP_URL }}
+      ARTICLE_SCORE_THRESHOLD: ${{ secrets.ARTICLE_SCORE_THRESHOLD }}
+      LLM_DAILY_COST_LIMIT_USD: ${{ secrets.LLM_DAILY_COST_LIMIT_USD }}
+      HARNESS_MAX_RETRIES: ${{ secrets.HARNESS_MAX_RETRIES }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install .
+      - run: python -m src.pipeline.l1_collect

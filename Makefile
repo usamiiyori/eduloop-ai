@@ -9,11 +9,12 @@ setup:
 
 # 収集〜検証〜（承認済みのみ）配信のパイプラインを1回実行
 run:
-	@echo "未実装（Phase 2〜5 で src/ 配下のパイプラインを実装後に接続します）"
+	python -m src.pipeline.l1_collect
+	python -m src.pipeline.l2_publish
 
 # APIキー・DB接続・各ソース疎通・直近実行結果を日本語で診断
 doctor:
-	@echo "未実装（Phase 6 で実装します）"
+	python -m src.pipeline.doctor
 
 # pytest + ruff + mypy を実行
 test:
@@ -23,8 +24,8 @@ test:
 
 # 当月のLLM API推定コストを日本語で表示
 cost:
-	@echo "未実装（Phase 6 で実装します）"
+	python -m src.pipeline.cost
 
 # キルスイッチ: 全自動処理を即停止
 stop:
-	@echo "未実装（Phase 6 で実装します）"
+	python -m src.pipeline.stop
