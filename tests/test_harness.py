@@ -165,6 +165,31 @@ class TestG1FactVerification:
         assert g1.passed is False
         assert "意味的類似度" in g1.reason
 
+    async def test_semantic_verify_splits_long_source_into_batches_of_100(self) -> None:
+        """Gemini埋め込みAPIの batchEmbedContents は1回最大100件までしか受け付けない
+        （2026-08-23、L1初回実行の実データで実際にINVALID_ARGUMENTエラーを確認・修正）。
+        原文の文数が100を超えても、分割して呼び出し、正しく一致文を見つけられること。"""
+        from src.harness.g1_fact_verification import _EMBED_BATCH_LIMIT, _semantic_verify
+
+        # 101件の候補文(マッチ対象を101番目=2つ目のバッチに配置)を用意する。
+        filler = [f"ダミー文その{i}。" for i in range(_EMBED_BATCH_LIMIT)]
+        long_source = "".join(filler) + "パイロット事業の対応文。"
+
+        call_sizes: list[int] = []
+
+        async def fake_embed_texts(texts: list[str]) -> list[list[float]]:
+            call_sizes.append(len(texts))
+            return [
+                [1.0, 0.0] if (t == "対象文" or "パイロット事業" in t) else [0.0, 1.0]
+                for t in texts
+            ]
+
+        similarity = await _semantic_verify("対象文", long_source, fake_embed_texts)
+
+        assert similarity == 1.0
+        assert len(call_sizes) == 2  # 101件の候補文が2バッチに分割される
+        assert all(size <= _EMBED_BATCH_LIMIT for size in call_sizes)
+
 
 class TestG2CitationLicense:
     async def test_blocks_missing_citation(self) -> None:

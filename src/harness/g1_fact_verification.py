@@ -37,6 +37,10 @@ _FUZZY_MATCH_THRESHOLD = 0.5
 _FUZZY_WINDOW = 60
 _SEMANTIC_MATCH_THRESHOLD = 0.80  # gemini-embedding-001での暫定値。運用しながら較正する
 _SOURCE_SENTENCE_SPLIT_RE = re.compile(r"(?<=[。！？\n])")
+# Gemini埋め込みAPIの batchEmbedContents は1回のリクエストにつき最大100件という制限がある
+# （2026-08-23、実際のAPIエラー'BatchEmbedContentsRequest.requests: at most 100 requests
+# can be in one batch'で確認）。長い原文で候補文がこれを超えないよう分割して呼び出す。
+_EMBED_BATCH_LIMIT = 100
 
 
 def _combined_source_text(context: HarnessContext) -> str:
@@ -62,9 +66,18 @@ async def _semantic_verify(sentence: str, source: str, embed_texts: EmbedFn) -> 
     candidates = _source_sentences(source)
     if not candidates:
         return 0.0
-    vectors = await embed_texts([sentence, *candidates])
-    sentence_vec, source_vecs = vectors[0], vectors[1:]
-    return max((_cosine_similarity(sentence_vec, v) for v in source_vecs), default=0.0)
+
+    best = 0.0
+    chunk_size = _EMBED_BATCH_LIMIT - 1  # 先頭に sentence 自身を含めるため1件分空けておく
+    for start in range(0, len(candidates), chunk_size):
+        chunk = candidates[start : start + chunk_size]
+        vectors = await embed_texts([sentence, *chunk])
+        sentence_vec, chunk_vecs = vectors[0], vectors[1:]
+        chunk_best = max(
+            (_cosine_similarity(sentence_vec, v) for v in chunk_vecs), default=0.0
+        )
+        best = max(best, chunk_best)
+    return best
 
 
 async def check(context: HarnessContext) -> GateResult:
