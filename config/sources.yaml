@@ -106,7 +106,15 @@
   redistribution: quote_only
   quote_max_ratio: 0.1
   crawl_interval_seconds: 3600
-  notes: 経産省本体ドメインと別ドメイン運用の可能性あり。利用規約未確認。
+  notes: >
+    既知の問題(2026-08-23確認): このドメインはDNS解決不能(NXDOMAIN)。2026年4月1日付で
+    経産省サイトへの内容移管が公式に告知されている(移管先候補:
+    https://www.meti.go.jp/policy/servicepolicy/mirai_no_kyoshitsu/mirai_no_kyositsu.html
+    または https://www.meti.go.jp/shingikai/mono_info_service/mirai_kyoshitsu/ )。
+    ただしmeti.go.jpはブラウザ以外のUser-Agentを403でブロックするWAFを持つことを確認済み
+    (curlで検証: ブラウザUA=200、本システムのUA=403)。ブラウザ偽装での回避は本システムの
+    「User-Agentで正直に名乗る」方針(CLAUDE.md)に反するため行わない。現状は取得不能な
+    ソースとして残し、source_healthの3回連続失敗通知に任せる。恒久対応は要検討。
 
 - id: cao_ai_strategy
   name: 内閣府 AI戦略会議
@@ -185,49 +193,62 @@
   name: 戸田市 生成AIパイロット実践
   axis: b_local_gov
   fetch_type: html_diff
-  url: https://www.city.toda.saitama.jp/
+  url: https://www.city.toda.saitama.jp/site/press/hisyo-press2023-chatgptguide.html
   license: unconfirmed
   attribution_required: true
   redistribution: quote_only
   quote_max_ratio: 0.1
   crawl_interval_seconds: 3600
-  notes: 実際のパイロット報告掲載ページはPhase2で個別特定・利用規約確認する。
+  notes: >
+    Phase6で市トップページ(生成AI関連内容なし)から「自治体におけるChatGPT等の生成AI活用ガイド」
+    記者発表ページに修正(2026-08-23、WebFetchでHTTP200・生成AI関連内容を確認済み)。
+    利用規約は個別記載なし(サイト共通のCopyright表記のみ)のためunconfirmedのまま。
 
 - id: shibuya_city_education
   name: 渋谷区 教育DXパイロット実践
   axis: b_local_gov
   fetch_type: html_diff
-  url: https://www.city.shibuya.tokyo.jp/
+  url: https://www.city.shibuya.tokyo.jp/kodomo/shibuya-kyoiku/kaigiroku/
   license: unconfirmed
   attribution_required: true
   redistribution: quote_only
   quote_max_ratio: 0.1
   crawl_interval_seconds: 3600
-  notes: 実際のパイロット報告掲載ページはPhase2で個別特定・利用規約確認する。
+  notes: >
+    Phase6で市トップページから教育委員会定例会・会議録一覧ページに修正
+    (2026-08-23、WebFetchでHTTP200を確認済み)。ただし生成AI特化のページは検索で
+    見つからなかった(このページ自体に生成AIへの直接言及はなし)。より的確なページが
+    見つかり次第、再度更新すること。
 
 - id: kumamoto_city_education
   name: 熊本市 教育DXパイロット実践
   axis: b_local_gov
   fetch_type: html_diff
-  url: https://www.city.kumamoto.jp/
+  url: https://www.city.kumamoto.jp/kiji00325530/index.html
   license: unconfirmed
   attribution_required: true
   redistribution: quote_only
   quote_max_ratio: 0.1
   crawl_interval_seconds: 3600
-  notes: 実際のパイロット報告掲載ページはPhase2で個別特定・利用規約確認する。
+  notes: >
+    Phase6で市トップページから「熊本市教育の情報化検討委員会」ページに修正
+    (2026-08-23、WebFetchで「生成AIパイロット校活用実践」の記載を確認済み)。
+    五福小学校・桜山中学校がリーディングDXスクール(生成AIパイロット校)に指定されている。
 
 - id: tsukuba_city_education
   name: つくば市 教育DXパイロット実践
   axis: b_local_gov
   fetch_type: html_diff
-  url: https://www.city.tsukuba.lg.jp/
+  url: https://www.tsukuba-school.jp/edu/ict/gigaschool/
   license: unconfirmed
   attribution_required: true
   redistribution: quote_only
   quote_max_ratio: 0.1
   crawl_interval_seconds: 3600
-  notes: 実際のパイロット報告掲載ページはPhase2で個別特定・利用規約確認する。
+  notes: >
+    Phase6で市トップページから教育局公式サイトの「つくば市GIGAスクール構想」ページ
+    (先進的ICT教育専用サブドメイン)に修正(2026-08-23、WebFetchで「生成AI活用の手引き」
+    2024〜2026版へのリンクを確認済み)。
 
 # ── C. 世界・学術・技術 ──────────────────────────────
 - id: unesco_ai_education
