@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+<channel>
+<title>テストフィード</title>
+<link>https://example.test/</link>
+<description>fixture</description>
+<item>
+<title>テスト記事1</title>
+<link>https://example.test/1</link>
+<description>これはテスト記事1の本文です。</description>
+<pubDate>Mon, 17 Aug 2026 00:00:00 GMT</pubDate>
+</item>
+<item>
+<title>テスト記事2</title>
+<link>https://example.test/2</link>
+<description>これはテスト記事2の本文です。</description>
+<pubDate>Tue, 18 Aug 2026 00:00:00 GMT</pubDate>
+</item>
+</channel>
+</rss>

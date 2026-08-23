@@ -1,0 +1,390 @@
+# 収集ソースレジストリ + ライセンス台帳（CLAUDE.md 第4章 / docs/ARCHITECTURE.md 第1・5章）。
+#
+# ソースを追加する場合は、このファイルに1エントリ追記するだけでよい（コード変更不要）。
+# 各フィールドは src/models/source.py の SourceConfig で検証される。
+#
+# license / redistribution の初期値について（重要・Phase 1時点の状況）:
+#   - 文部科学省(mext_press, mext_chuokyoshin)のみ、公式ページで
+#     「政府標準利用規約(第2.0版)」採用を直接確認できたため full_allowed とした。
+#     ただし2024年7月にデジタル庁が後継の「公共データ利用規約(第1.0版)」を策定しており、
+#     個別サイトが移行済みかは未確認（Phase 2でのスクレイパー実装前に再確認すること）。
+#   - それ以外の全ソースは、個別の利用規約ページを未確認のため license: unconfirmed とし、
+#     安全側に倒して redistribution: quote_only（quote_max_ratio: 0.1）を暫定設定している。
+#     「推測でコードを書かない」原則（CLAUDE.md 第0章）に基づく。Phase 2着手前に1件ずつ
+#     公式の利用規約ページを確認し、確認済みのものから license/redistribution を更新すること。
+#   - arXiv は論文ごとにライセンスが異なるため、ここでは axis=c_global_academic の代表エントリ
+#     のみを置き、実際の論文単位のライセンス判定は scrapers 実装時に個別取得する
+#     （docs/ARCHITECTURE.md 第5章）。
+
+# ── A. 行政・政策（日本） ──────────────────────────────
+- id: mext_press
+  name: 文部科学省 新着情報（報道発表を含む）
+  axis: a_policy_jp
+  fetch_type: rss
+  url: https://www.mext.go.jp/b_menu/news/index.rdf
+  license: gov_standard_terms_2_0
+  attribution_required: true
+  redistribution: full_allowed
+  crawl_interval_seconds: 3600
+  notes: >
+    利用規約ページ(https://www.mext.go.jp/b_menu/1351168.htm)で政府標準利用規約(第2.0版)
+    採用を確認済み(2016-07-12制定)。RSS URLはPhase2で実疎通確認済み(RSS1.0/RDF形式、
+    2026-08-18確認、HTTP200)。旧URL(index.htm)は404だったため index.rdf に修正した。
+
+- id: mext_chuokyoshin
+  name: 文部科学省 中央教育審議会 初等中等教育分科会
+  axis: a_policy_jp
+  fetch_type: html_diff
+  url: https://www.mext.go.jp/b_menu/shingi/chukyo/chukyo3/index.htm
+  license: gov_standard_terms_2_0
+  attribution_required: true
+  redistribution: full_allowed
+  crawl_interval_seconds: 3600
+  notes: >
+    mext_press と同一サイト内のため同一ライセンス扱い。PDF資料はページ番号保持が必須。
+    旧URL(shingi/chukyo/index.htm)は403だったため初等中等教育分科会ページに修正
+    (Phase2で実疎通確認済み、2026-08-18、HTTP200)。
+
+- id: mext_gen_ai_guideline_v2
+  name: 文部科学省 初等中等教育段階における生成AIの利活用に関するガイドライン(Ver.2.0)概要
+  axis: a_policy_jp
+  fetch_type: pdf
+  url: https://www.mext.go.jp/content/20241226-mxt_shuukyo02-000030823_002.pdf
+  license: gov_standard_terms_2_0
+  attribution_required: true
+  redistribution: full_allowed
+  crawl_interval_seconds: 3600
+  notes: >
+    mext_press と同一サイト内のため同一ライセンス扱い。Phase2でPDF抽出パイプラインの
+    実データ確認に使用(2026-08-18、HTTP200、約517KB)。ページ番号保持の検証対象。
+
+- id: digital_agency_education
+  name: デジタル庁 教育DX関連
+  axis: a_policy_jp
+  fetch_type: html_diff
+  url: https://www.digital.go.jp/policies/education
+  license: unconfirmed
+  attribution_required: true
+  redistribution: quote_only
+  quote_max_ratio: 0.1
+  crawl_interval_seconds: 3600
+  notes: デジタル庁は2024年7月に公共データ利用規約(第1.0版)を策定。本ページでの採用状況は未確認。
+
+- id: bunkacho_copyright_wg
+  name: 文化庁 著作権分科会（AIと著作権）
+  axis: a_policy_jp
+  fetch_type: html_diff
+  url: https://www.bunka.go.jp/seisaku/bunkashingikai/chosakuken/hoseido/
+  license: unconfirmed
+  attribution_required: true
+  redistribution: quote_only
+  quote_max_ratio: 0.1
+  crawl_interval_seconds: 3600
+  notes: >
+    本システム自体の著作権リスクの核心ソース。断定表現(G4)・引用比率(G2)を特に厳格運用すること
+    (CLAUDE.md 第4章)。利用規約は未確認のためPhase2着手前に必ず個別確認。
+
+- id: soumu_ict_education
+  name: 総務省 ICT教育関連・情報通信白書
+  axis: a_policy_jp
+  fetch_type: html_diff
+  url: https://www.soumu.go.jp/johotsusintokei/whitepaper/
+  license: unconfirmed
+  attribution_required: true
+  redistribution: quote_only
+  quote_max_ratio: 0.1
+  crawl_interval_seconds: 3600
+  notes: 利用規約未確認。
+
+- id: meti_mirai_no_kyoshitsu
+  name: 経済産業省 未来の教室 / EdTech
+  axis: a_policy_jp
+  fetch_type: html_diff
+  url: https://www.learning-innovation.go.jp/
+  license: unconfirmed
+  attribution_required: true
+  redistribution: quote_only
+  quote_max_ratio: 0.1
+  crawl_interval_seconds: 3600
+  notes: 経産省本体ドメインと別ドメイン運用の可能性あり。利用規約未確認。
+
+- id: cao_ai_strategy
+  name: 内閣府 AI戦略会議
+  axis: a_policy_jp
+  fetch_type: html_diff
+  url: https://www8.cao.go.jp/cstp/ai/index.html
+  license: unconfirmed
+  attribution_required: true
+  redistribution: quote_only
+  quote_max_ratio: 0.1
+  crawl_interval_seconds: 3600
+  notes: 内閣府本体は https://www.cao.go.jp/notice/rule.html に利用規約あり。本ページでの適用範囲は未確認。
+
+- id: ppc_education_data
+  name: 個人情報保護委員会 教育データと個人情報
+  axis: a_policy_jp
+  fetch_type: html_diff
+  url: https://www.ppc.go.jp/
+  license: unconfirmed
+  attribution_required: true
+  redistribution: quote_only
+  quote_max_ratio: 0.1
+  crawl_interval_seconds: 3600
+  notes: 利用規約未確認。
+
+- id: nier_reports
+  name: 国立教育政策研究所（NIER）
+  axis: a_policy_jp
+  fetch_type: html_diff
+  url: https://www.nier.go.jp/
+  license: unconfirmed
+  attribution_required: true
+  redistribution: quote_only
+  quote_max_ratio: 0.1
+  crawl_interval_seconds: 3600
+  notes: 独立行政法人。利用規約未確認。
+
+- id: ipa_ai_safety
+  name: IPA AIセーフティ・技術動向
+  axis: a_policy_jp
+  fetch_type: rss
+  url: https://www.ipa.go.jp/
+  license: unconfirmed
+  attribution_required: true
+  redistribution: quote_only
+  quote_max_ratio: 0.1
+  crawl_interval_seconds: 3600
+  notes: 利用規約未確認。
+
+# ── B. 地域・先進自治体 ──────────────────────────────
+- id: aichi_pref_edu_board
+  name: 愛知県教育委員会
+  axis: b_local_gov
+  fetch_type: html_diff
+  url: https://www.pref.aichi.jp/site/kyouiku/
+  license: unconfirmed
+  attribution_required: true
+  redistribution: quote_only
+  quote_max_ratio: 0.1
+  crawl_interval_seconds: 3600
+  notes: 利用規約未確認。
+
+- id: nagoya_city_edu_board
+  name: 名古屋市教育委員会
+  axis: b_local_gov
+  fetch_type: html_diff
+  url: https://www.city.nagoya.jp/kyoiku/
+  license: unconfirmed
+  attribution_required: true
+  redistribution: quote_only
+  quote_max_ratio: 0.1
+  crawl_interval_seconds: 3600
+  notes: 利用規約未確認。
+
+- id: toda_city_gigaschool
+  name: 戸田市 生成AIパイロット実践
+  axis: b_local_gov
+  fetch_type: html_diff
+  url: https://www.city.toda.saitama.jp/
+  license: unconfirmed
+  attribution_required: true
+  redistribution: quote_only
+  quote_max_ratio: 0.1
+  crawl_interval_seconds: 3600
+  notes: 実際のパイロット報告掲載ページはPhase2で個別特定・利用規約確認する。
+
+- id: shibuya_city_education
+  name: 渋谷区 教育DXパイロット実践
+  axis: b_local_gov
+  fetch_type: html_diff
+  url: https://www.city.shibuya.tokyo.jp/
+  license: unconfirmed
+  attribution_required: true
+  redistribution: quote_only
+  quote_max_ratio: 0.1
+  crawl_interval_seconds: 3600
+  notes: 実際のパイロット報告掲載ページはPhase2で個別特定・利用規約確認する。
+
+- id: kumamoto_city_education
+  name: 熊本市 教育DXパイロット実践
+  axis: b_local_gov
+  fetch_type: html_diff
+  url: https://www.city.kumamoto.jp/
+  license: unconfirmed
+  attribution_required: true
+  redistribution: quote_only
+  quote_max_ratio: 0.1
+  crawl_interval_seconds: 3600
+  notes: 実際のパイロット報告掲載ページはPhase2で個別特定・利用規約確認する。
+
+- id: tsukuba_city_education
+  name: つくば市 教育DXパイロット実践
+  axis: b_local_gov
+  fetch_type: html_diff
+  url: https://www.city.tsukuba.lg.jp/
+  license: unconfirmed
+  attribution_required: true
+  redistribution: quote_only
+  quote_max_ratio: 0.1
+  crawl_interval_seconds: 3600
+  notes: 実際のパイロット報告掲載ページはPhase2で個別特定・利用規約確認する。
+
+# ── C. 世界・学術・技術 ──────────────────────────────
+- id: unesco_ai_education
+  name: UNESCO AI in Education
+  axis: c_global_academic
+  fetch_type: html_diff
+  url: https://www.unesco.org/en/digital-education/artificial-intelligence
+  license: unconfirmed
+  attribution_required: true
+  redistribution: quote_only
+  quote_max_ratio: 0.1
+  crawl_interval_seconds: 3600
+  notes: >
+    公式ページで確認済み: UNESCO出版物のライセンスは文書ごとに個別指定され一律ではない
+    (CC BY-SA / CC BY-NC-SA / CC BY-NC-ND / CC BY-ND 等)。文書単位でのライセンス確認が必須。
+
+- id: oecd_education_2030
+  name: OECD Education 2030 / Digital Education Outlook
+  axis: c_global_academic
+  fetch_type: html_diff
+  url: https://www.oecd.org/en/topics/education.html
+  license: unconfirmed
+  attribution_required: true
+  redistribution: quote_only
+  quote_max_ratio: 0.1
+  crawl_interval_seconds: 3600
+  notes: 利用規約未確認。OECD著作物は原則copyrighted、条件付き複製許可の可能性あり要確認。
+
+- id: us_ed_gov_office_edtech
+  name: 米国教育省 Office of Educational Technology
+  axis: c_global_academic
+  fetch_type: html_diff
+  url: https://tech.ed.gov/
+  license: unconfirmed
+  attribution_required: false
+  redistribution: quote_only
+  quote_max_ratio: 0.1
+  crawl_interval_seconds: 3600
+  notes: >
+    米国連邦政府職員が作成した著作物は17 U.S.C. §105によりパブリックドメインが原則だが、
+    第三者コンテンツ混在の可能性がありPhase2で個別確認する。
+
+- id: uk_dfe_generative_ai
+  name: 英国 DfE generative AI in education
+  axis: c_global_academic
+  fetch_type: html_diff
+  url: https://www.gov.uk/government/organisations/department-for-education
+  license: unconfirmed
+  attribution_required: true
+  redistribution: quote_only
+  quote_max_ratio: 0.1
+  crawl_interval_seconds: 3600
+  notes: 英国政府はOpen Government Licenceを採用する場合が多いが本サイトでの適用は未確認。
+
+- id: eu_ai_act_education
+  name: 欧州委員会 EU AI Act（教育分野・高リスク分類）
+  axis: c_global_academic
+  fetch_type: html_diff
+  url: https://digital-strategy.ec.europa.eu/en/policies/regulatory-framework-ai
+  license: unconfirmed
+  attribution_required: true
+  redistribution: quote_only
+  quote_max_ratio: 0.1
+  crawl_interval_seconds: 3600
+  notes: EU公式文書は通常CC BY 4.0だが本サイトでの適用は未確認。日本の議論に先行するため優先度高。
+
+- id: arxiv_cs_cy_education
+  name: arXiv cs.CY / cs.HC / cs.AI（教育関連）
+  axis: c_global_academic
+  fetch_type: rss
+  url: http://export.arxiv.org/rss/cs.CY
+  license: arxiv-varies
+  attribution_required: true
+  redistribution: quote_only
+  quote_max_ratio: 0.1
+  crawl_interval_seconds: 3
+  robots_txt_override: true
+  override_justification: >
+    export.arxiv.org/robots.txt は User-agent:* に Disallow:/ を設定しているが、これは
+    汎用検索エンジンのインデックス化を避けるための設定。arXiv公式API利用規約
+    (https://info.arxiv.org/help/api/tou.html, 2026-08-18確認)で「3秒に1回・単一接続まで」
+    のレート制限を守ることを条件にプログラムからのアクセスを明示的に許可している。
+    本レジストリの crawl_interval_seconds もこの規約に合わせて3秒に設定する。
+  notes: >
+    論文ごとにライセンスが異なる(arXiv perpetual license / CC BY / CC BY-NC-ND等)。
+    CC BY-NC-ND の論文は図表転載禁止(docs/ARCHITECTURE.md 第5章)。取得時に論文単位で
+    ライセンスを再判定するロジックをPhase2 scrapersに実装すること。メタデータはCC0。
+    論文本体(PDF)の再配布は権利者許可がない限り不可(ToU確認済み)。
+
+- id: jset_education_tech
+  name: 日本教育工学会（JSET）
+  axis: c_global_academic
+  fetch_type: html_diff
+  url: https://www.jset.gr.jp/
+  license: unconfirmed
+  attribution_required: true
+  redistribution: quote_only
+  quote_max_ratio: 0.1
+  crawl_interval_seconds: 3600
+  notes: 利用規約未確認。学会誌論文は個別著作権保持の可能性が高い。
+
+- id: stanford_hai_ai_index
+  name: Stanford HAI AI Index（教育セクション）
+  axis: c_global_academic
+  fetch_type: html_diff
+  url: https://aiindex.stanford.edu/report/
+  license: unconfirmed
+  attribution_required: true
+  redistribution: quote_only
+  quote_max_ratio: 0.1
+  crawl_interval_seconds: 3600
+  notes: 利用規約未確認。
+
+- id: bigtech_anthropic_education
+  name: Anthropic Education 公式発信
+  axis: c_global_academic
+  fetch_type: rss
+  url: https://www.anthropic.com/education
+  license: copyrighted-quote-only
+  attribution_required: true
+  redistribution: quote_only
+  quote_max_ratio: 0.1
+  crawl_interval_seconds: 3600
+  notes: 企業公式ブログは著作権法32条の引用要件を厳格に満たす形でのみ引用する。
+
+- id: bigtech_openai_education
+  name: OpenAI Education 公式発信
+  axis: c_global_academic
+  fetch_type: rss
+  url: https://openai.com/education/
+  license: copyrighted-quote-only
+  attribution_required: true
+  redistribution: quote_only
+  quote_max_ratio: 0.1
+  crawl_interval_seconds: 3600
+  notes: 企業公式ブログは著作権法32条の引用要件を厳格に満たす形でのみ引用する。
+
+- id: bigtech_google_for_education
+  name: Google for Education 公式発信
+  axis: c_global_academic
+  fetch_type: rss
+  url: https://blog.google/outreach-initiatives/education/
+  license: copyrighted-quote-only
+  attribution_required: true
+  redistribution: quote_only
+  quote_max_ratio: 0.1
+  crawl_interval_seconds: 3600
+  notes: 企業公式ブログは著作権法32条の引用要件を厳格に満たす形でのみ引用する。
+
+- id: bigtech_microsoft_education
+  name: Microsoft Education 公式発信
+  axis: c_global_academic
+  fetch_type: rss
+  url: https://blogs.microsoft.com/education/
+  license: copyrighted-quote-only
+  attribution_required: true
+  redistribution: quote_only
+  quote_max_ratio: 0.1
+  crawl_interval_seconds: 3600
+  notes: 企業公式ブログは著作権法32条の引用要件を厳格に満たす形でのみ引用する。
