@@ -4,15 +4,24 @@
 
 ## 現在地
 
-**Phase 5 完了・停止中（オーナーの指示待ち）。**
-Supabaseプロジェクトを作成し、GitHubリポジトリ（https://github.com/usamiiyori/eduloop-ai ,
-Public）を新規作成してpush、GitHub Pagesで公開したWeb承認画面から実データでの
-承認操作・RLS・監査ログ記録まで動作確認済み。次はPhase 6（自動運用と計測）。
+**Phase 6 実装・実データ検証済み、通知基盤の移行作業中。**
+L1/L2/L3のGitHub Actionsパイプライン・Supabase永続化層・`make doctor`/`cost`/`stop` を実装し、
+実際にL1を実行して実データでの動作（記事生成・harness検証・Slack通知・承認画面表示）を
+確認した。その過程で発見した3件の実障害（1ソースのハングが全体を止める・埋め込みAPIの
+100件バッチ上限超過・自治体ソースURLが的外れ）を修正済み。2026-08-23、オーナーの希望により
+通知基盤をSlackからメール（Gmail SMTP、1日1回夕方まとめ通知）に移行中（コード実装済み、
+オーナー側のGmailアプリパスワード設定待ち）。
 
 ## 解決済みの判断事項
 
 - `make` コマンドはWindowsに標準で入っていないため、`docs/運用マニュアル.md` に `winget install GnuWin32.Make` での導入手順を明記した（オーナー承認済み）。
 - 本番シークレットは GitHub Actions Secrets を使用する（Google Secret Managerは使わない、オーナー承認済み）。
+- 承認通知はSlackではなくメール（Gmail SMTP）を使う（2026-08-23、オーナー承認済み）。
+  理由: 普段使い慣れたGmailで完結させたい、かつ記事ごとの逐次通知より1日1回のまとめ通知の方が
+  通勤時間等にまとめて確認しやすいため。送信元・収集先サイトへの名乗り(`SCRAPER_CONTACT_URL`)は
+  オーナー本人の身元と紐づかない専用Googleアカウントを使い、追跡防止に配慮した。
+- 経産省「未来の教室」はmeti.go.jp移管後にWAFで非ブラウザUser-Agentが403拒否されるため、
+  ブラウザ偽装はせずInternet Archive(Wayback Machine)経由での取得に変更した（オーナー承認済み）。
 
 ## Phase 0 — 基盤と憲法
 
@@ -78,11 +87,15 @@ Public）を新規作成してpush、GitHub Pagesで公開したWeb承認画面�
 
 ## Phase 6 — 自動運用と計測
 
-- [ ] GitHub Actions cron（L1毎時 / L2日次 / L3月次）
-- [ ] `make doctor` / `make cost` / `make stop`
-- [ ] メトリクス収集と月次レポート
-- [ ] 運用マニュアル完成
-- → 完了報告
+- [x] GitHub Actions cron（L1は`SCRAPER_CONTACT_URL`未確定のため`workflow_dispatch`手動実行のみ、
+      L2日次 / L3月次 / レビューまとめメール日次は有効化済み）
+- [x] `make doctor` / `make cost` / `make stop`（実データで動作確認済み）
+- [x] メトリクス収集と月次レポート（L3実装・空データでの実行確認済み。実際の指標が
+      貯まった状態での確認はこれから）
+- [ ] 運用マニュアル完成（通知メール移行に伴う更新は反映済み。オーナー側のGmailアプリ
+      パスワード設定完了後、実データでの通知確認が必要）
+- [ ] 通知基盤のSlack→メール移行の実地確認（オーナーのGmail設定完了待ち）
+- → 完了報告はオーナーのGmail設定完了・実地確認後
 
 ## 未確認事項（実装前に公式ドキュメント確認が必要）
 

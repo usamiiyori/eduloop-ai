@@ -1,29 +1,23 @@
-name: L2 承認済み記事の配信（日次）
+name: レビュー依頼まとめメール（毎日夕方）
 
 on:
   schedule:
-    - cron: "0 21 * * *"
+    - cron: "0 9 * * *"
   workflow_dispatch:
 
-concurrency:
-  group: l2-publish
-  cancel-in-progress: false
-
 jobs:
-  publish:
+  digest:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      REVIEW_APP_URL: ${{ secrets.REVIEW_APP_URL }}
       SMTP_HOST: ${{ secrets.SMTP_HOST }}
       SMTP_PORT: ${{ secrets.SMTP_PORT }}
       SMTP_USER: ${{ secrets.SMTP_USER }}
       SMTP_APP_PASSWORD: ${{ secrets.SMTP_APP_PASSWORD }}
       NOTIFY_TO_EMAIL: ${{ secrets.NOTIFY_TO_EMAIL }}
-      CONTACT_URL: ${{ secrets.CONTACT_URL }}
-      NOTE_URL: ${{ secrets.NOTE_URL }}
-      X_PUBLISH_MODE: ${{ secrets.X_PUBLISH_MODE }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -31,4 +25,4 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: pip install .
-      - run: python -m src.pipeline.l2_publish
+      - run: python -m src.pipeline.review_digest

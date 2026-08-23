@@ -19,7 +19,11 @@ jobs:
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       GOOGLE_GENAI_API_KEY: ${{ secrets.GOOGLE_GENAI_API_KEY }}
       GOOGLE_GENAI_MODEL: ${{ secrets.GOOGLE_GENAI_MODEL }}
-      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      SMTP_HOST: ${{ secrets.SMTP_HOST }}
+      SMTP_PORT: ${{ secrets.SMTP_PORT }}
+      SMTP_USER: ${{ secrets.SMTP_USER }}
+      SMTP_APP_PASSWORD: ${{ secrets.SMTP_APP_PASSWORD }}
+      NOTIFY_TO_EMAIL: ${{ secrets.NOTIFY_TO_EMAIL }}
       SCRAPER_CONTACT_URL: ${{ secrets.SCRAPER_CONTACT_URL }}
       REVIEW_APP_URL: ${{ secrets.REVIEW_APP_URL }}
       ARTICLE_SCORE_THRESHOLD: ${{ secrets.ARTICLE_SCORE_THRESHOLD }}

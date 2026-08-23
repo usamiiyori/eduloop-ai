@@ -1,18 +1,15 @@
-"""publishers層のテスト。Slack通知は実サイトへ接続せずrespxでモックする。"""
+"""publishers層のテスト。外部への実接続は行わずモックする。"""
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
-import httpx
 import pytest
-import respx
 
 from src.models.draft import Draft, DraftFormat, DraftStatus, KeyPoints
 from src.publishers.note_formatter import format_for_note
 from src.publishers.revenue_funnel import append_revenue_funnel
-from src.publishers.review_request import MissingWebhookError, notify_review_needed
 from src.publishers.utm import build_utm_url
 from src.publishers.web_publish import NotApprovedError, publish_web_article
 from src.publishers.x_publisher import format_thread_for_manual_posting, publish_x_thread
@@ -103,24 +100,51 @@ class TestXPublisher:
                 await publish_x_thread(["投稿A"])
 
 
-class TestReviewRequest:
-    async def test_missing_webhook_raises_japanese_error(self) -> None:
-        with patch("src.publishers.review_request.get_settings") as mock_settings:
-            mock_settings.return_value.slack_webhook_url = ""
-            with pytest.raises(MissingWebhookError, match="SLACK_WEBHOOK_URL"):
-                await notify_review_needed(make_draft(), "テスト記事", "https://example.com/r/1")
+class TestEmailNotify:
+    async def test_skips_silently_when_not_configured(self) -> None:
+        from src.publishers.email_notify import send_email
 
-    async def test_posts_payload_to_webhook(self) -> None:
-        async with respx.mock:
-            route = respx.post("https://hooks.slack.com/services/test").mock(
-                return_value=httpx.Response(200, content=b"ok")
-            )
-            with patch("src.publishers.review_request.get_settings") as mock_settings:
-                mock_settings.return_value.slack_webhook_url = "https://hooks.slack.com/services/test"
-                await notify_review_needed(make_draft(), "テスト記事", "https://example.com/r/1")
-        assert route.called
-        sent_body = route.calls.last.request.content.decode("utf-8")
-        assert "テスト記事" in sent_body
+        with patch("src.publishers.email_notify.get_settings") as mock_settings:
+            mock_settings.return_value.smtp_user = ""
+            mock_settings.return_value.smtp_app_password = ""
+            mock_settings.return_value.notify_to_email = ""
+            # 例外を出さず、静かに何もしないことを確認する(他の処理を止めないため)。
+            await send_email("件名", "本文")
+
+    async def test_sends_via_smtp_with_app_password(self) -> None:
+        from src.publishers.email_notify import send_email
+
+        fake_server = MagicMock()
+        fake_smtp_cm = MagicMock()
+        fake_smtp_cm.__enter__.return_value = fake_server
+        fake_smtp_cm.__exit__.return_value = False
+
+        with (
+            patch("src.publishers.email_notify.get_settings") as mock_settings,
+            patch("smtplib.SMTP", return_value=fake_smtp_cm) as mock_smtp_class,
+        ):
+            mock_settings.return_value.smtp_host = "smtp.gmail.com"
+            mock_settings.return_value.smtp_port = 587
+            mock_settings.return_value.smtp_user = "bot@example.com"
+            mock_settings.return_value.smtp_app_password = "app-password"
+            mock_settings.return_value.notify_to_email = "owner@example.com"
+
+            await send_email("テスト件名", "テスト本文")
+
+        mock_smtp_class.assert_called_once_with("smtp.gmail.com", 587, timeout=15)
+        fake_server.starttls.assert_called_once()
+        fake_server.login.assert_called_once_with("bot@example.com", "app-password")
+        fake_server.sendmail.assert_called_once()
+        args, _ = fake_server.sendmail.call_args
+        assert args[0] == "bot@example.com"
+        assert args[1] == ["owner@example.com"]
+
+        from email import message_from_string
+
+        sent_message = message_from_string(args[2])
+        assert sent_message["From"] == "bot@example.com"
+        assert sent_message["To"] == "owner@example.com"
+        assert sent_message.get_payload(decode=True).decode("utf-8") == "テスト本文"
 
 
 class TestWebPublish:

@@ -36,8 +36,12 @@ async def _check_env_keys() -> CheckResult:
         missing.append("SUPABASE_SERVICE_ROLE_KEY")
     if not settings.google_genai_api_key:
         missing.append("GOOGLE_GENAI_API_KEY")
-    if not settings.slack_webhook_url:
-        missing.append("SLACK_WEBHOOK_URL")
+    if not settings.smtp_user:
+        missing.append("SMTP_USER")
+    if not settings.smtp_app_password:
+        missing.append("SMTP_APP_PASSWORD")
+    if not settings.notify_to_email:
+        missing.append("NOTIFY_TO_EMAIL")
     if not settings.scraper_contact_url:
         missing.append("SCRAPER_CONTACT_URL")
 

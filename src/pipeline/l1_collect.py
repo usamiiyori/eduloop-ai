@@ -28,7 +28,7 @@ from src.models.source import SourceConfig, load_sources
 from src.processors import embeddings, generator
 from src.processors.context import ContextBundle, build_default_context
 from src.processors.scoring import passes_threshold
-from src.publishers import review_request, slack_notify
+from src.publishers import email_notify
 from src.scrapers import runner
 from src.store import cost_log, drafts, raw_documents, source_health_store, system_control
 
@@ -48,10 +48,11 @@ async def _update_source_health(sources: list[SourceConfig], errors: dict[str, s
         if source.id in errors:
             health = await source_health_store.record_failure(source.id, errors[source.id])
             if health.consecutive_failures >= source_health_store.NOTIFY_THRESHOLD:
-                await slack_notify.send_text(
-                    f":warning: 収集ソース「{source.name}」({source.id}) が"
+                await email_notify.send_email(
+                    f"[EduLoop AI] 収集異常: {source.name}",
+                    f"収集ソース「{source.name}」({source.id}) が"
                     f"{health.consecutive_failures}回連続で取得に失敗しています。\n"
-                    f"直近のエラー: {health.last_error}"
+                    f"直近のエラー: {health.last_error}",
                 )
         else:
             await source_health_store.record_success(source.id)
@@ -160,20 +161,15 @@ async def _process_document(
     await drafts.save_format_content(final_draft.format, final_context.structure_raw)
     await drafts.save_harness_runs(runs)
 
+    # 記事ごとの即時メールは送らない。レビュー依頼は1日1回、夕方に
+    # src/pipeline/review_digest.py がまとめて届ける
+    # (2026-08-23、オーナーの希望により逐次通知から日次まとめ通知に変更)。
     if all_passed:
-        await review_request.notify_review_needed(
-            final_draft, raw_document.title, review_url=_review_url()
+        logger.info(
+            "draft_ready_for_review", title=raw_document.title, score=final_draft.score_total
         )
     else:
-        await slack_notify.send_text(
-            f":rotating_light: 「{raw_document.title}」は自己修復を3回試みても"
-            f"ハーネス検証を通過しませんでした。needs_humanとしてレビューキューに残しています。\n"
-            f"{_review_url()}"
-        )
-
-
-def _review_url() -> str:
-    return get_settings().review_app_url
+        logger.warning("draft_needs_human", title=raw_document.title)
 
 
 async def run() -> None:
@@ -186,9 +182,10 @@ async def run() -> None:
     spent_today = await cost_log.today_total_usd()
     if spent_today >= limit:
         logger.warning("l1_skipped_cost_limit", spent_today=spent_today, limit=limit)
-        await slack_notify.send_text(
-            f":no_entry: 本日のLLM推定コストが上限(${limit:.2f})に達したため、"
-            f"L1収集をスキップしました。現在の推定コスト: ${spent_today:.2f}"
+        await email_notify.send_email(
+            "[EduLoop AI] コスト上限のためL1をスキップしました",
+            f"本日のLLM推定コストが上限(${limit:.2f})に達したため、"
+            f"L1収集をスキップしました。現在の推定コスト: ${spent_today:.2f}",
         )
         return
 
@@ -213,9 +210,10 @@ async def run() -> None:
         spent_today = await cost_log.today_total_usd()
         if spent_today >= limit:
             logger.warning("l1_stopped_mid_run_cost_limit", spent_today=spent_today)
-            await slack_notify.send_text(
-                f":no_entry: 本日のLLM推定コストが上限(${limit:.2f})に達したため、"
-                "残りの記事の処理を中断しました。次回実行時に続きを処理します。"
+            await email_notify.send_email(
+                "[EduLoop AI] コスト上限のため処理を中断しました",
+                f"本日のLLM推定コストが上限(${limit:.2f})に達したため、"
+                "残りの記事の処理を中断しました。次回実行時に続きを処理します。",
             )
             break
         source = source_by_id[raw_document.source_id]

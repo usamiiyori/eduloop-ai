@@ -19,7 +19,7 @@ import structlog
 
 from src.config import get_settings
 from src.models.draft import Draft, DraftFormat, KeyPoints
-from src.publishers import note_formatter, slack_notify, x_publisher
+from src.publishers import email_notify, note_formatter, x_publisher
 from src.publishers.web_publish import publish_web_article
 from src.store import supabase_client as sb
 from src.store import system_control
@@ -86,9 +86,9 @@ async def _publish_web_article(draft: Draft) -> None:
         await SupabasePublishStore().mark_published(draft.id, final_body)
 
     note_draft = note_formatter.format_for_note(article["title"], final_body)
-    await slack_notify.send_text(
-        f":tada: Web記事を公開しました: {article['title']}\n\n"
-        f"--- note下書き（コピペ用） ---\n{_truncate(note_draft)}"
+    await email_notify.send_email(
+        f"[EduLoop AI] Web記事を公開しました: {article['title']}",
+        f"--- note下書き（コピペ用） ---\n{_truncate(note_draft)}",
     )
 
 
@@ -99,9 +99,9 @@ async def _publish_x_thread(draft: Draft) -> None:
     posts = [r["text"] for r in rows]
     result = await x_publisher.publish_x_thread(posts)
     await sb.update("drafts", match={"id": str(draft.id)}, values={"status": "published"})
-    await slack_notify.send_text(
-        ":tada: Xスレッドの下書きができました（手動投稿してください）\n\n"
-        f"{_truncate(result.formatted_text)}"
+    await email_notify.send_email(
+        "[EduLoop AI] Xスレッドの下書きができました",
+        f"手動投稿してください。\n\n{_truncate(result.formatted_text)}",
     )
 
 
@@ -109,10 +109,10 @@ async def _publish_youtube_script(draft: Draft) -> None:
     rows = await sb.select("youtube_scripts", params={"draft_id": f"eq.{draft.id}"})
     script = rows[0]
     await sb.update("drafts", match={"id": str(draft.id)}, values={"status": "published"})
-    await slack_notify.send_text(
-        ":tada: YouTube台本ができました\n\n"
+    await email_notify.send_email(
+        "[EduLoop AI] YouTube台本ができました",
         f"--- 台本 ---\n{_truncate(script['script_text'])}\n\n"
-        f"--- 概要欄 ---\n{_truncate(script['description_text'])}"
+        f"--- 概要欄 ---\n{_truncate(script['description_text'])}",
     )
 
 

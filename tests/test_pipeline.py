@@ -5,6 +5,7 @@ from __future__ import annotations
 from src.models.primary_source import LicenseSnapshot, RawDocument
 from src.models.source import FetchType, LicenseType, RedistributionMode
 from src.pipeline.l1_collect import _dedup_new_documents
+from src.pipeline.review_digest import _format_digest
 from src.processors.context import build_default_context
 from src.processors.pricing import estimate_cost_usd
 from src.processors.prompt_builder import build_extraction_prompt
@@ -73,3 +74,21 @@ class TestDedupNewDocuments:
         docs = [_doc("s1", f"a{i}") for i in range(5)] + [_doc("s2", f"b{i}") for i in range(5)]
         result = _dedup_new_documents(docs, known_hashes={})
         assert len(result) == 10
+
+
+class TestReviewDigestFormatting:
+    def test_empty_queue_reports_healthy_status(self) -> None:
+        body = _format_digest([], "https://example.com/review")
+        assert "ありません" in body
+        assert "https://example.com/review" in body
+
+    def test_lists_pending_items_with_needs_human_badge(self) -> None:
+        summaries = [
+            {"title": "通常記事", "status": "draft", "score_total": 60},
+            {"title": "要対応記事", "status": "needs_human", "score_total": 40},
+        ]
+        body = _format_digest(summaries, "https://example.com/review")
+        assert "2件" in body
+        assert "通常記事" in body
+        assert "【要人間レビュー】要対応記事" in body
+        assert "https://example.com/review" in body

@@ -33,10 +33,25 @@ class Settings(BaseSettings):
         ),
     )
 
-    discord_webhook_url: str = Field(default="", alias="DISCORD_WEBHOOK_URL")
-    slack_webhook_url: str = Field(default="", alias="SLACK_WEBHOOK_URL")
     review_app_url: str = Field(
         default="https://usamiiyori.github.io/eduloop-ai/", alias="REVIEW_APP_URL"
+    )
+
+    smtp_host: str = Field(default="smtp.gmail.com", alias="SMTP_HOST")
+    smtp_port: int = Field(default=587, alias="SMTP_PORT")
+    smtp_user: str = Field(
+        default="",
+        alias="SMTP_USER",
+        description=(
+            "通知専用アカウントのGmailアドレス。SCRAPER_CONTACT_URLと同じ、"
+            "オーナー本人の身元とは紐づかない専用アカウントを使うこと。"
+        ),
+    )
+    smtp_app_password: str = Field(default="", alias="SMTP_APP_PASSWORD")
+    notify_to_email: str = Field(
+        default="",
+        alias="NOTIFY_TO_EMAIL",
+        description="通知の宛先(オーナーが実際に読むメールアドレス)。外部には一切公開しない。",
     )
     contact_url: str = Field(
         default="",

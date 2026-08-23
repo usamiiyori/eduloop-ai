@@ -1,4 +1,4 @@
-"""L3: 月次の知見還元。収益KPI(docs/ARCHITECTURE.md 4章)を集計してSlackへ月次レポートとして
+"""L3: 月次の知見還元。収益KPI(docs/ARCHITECTURE.md 4章)を集計してメールで月次レポートとして
 届ける。GitHub Actions cron(月次)から実行する。
 
 Phase6スコープの意図的な簡略化: ソース優先度の自動調整・コンテキスト層への教員フィードバック
@@ -15,7 +15,7 @@ from datetime import UTC, datetime
 
 import structlog
 
-from src.publishers import slack_notify
+from src.publishers import email_notify
 from src.store import supabase_client as sb
 from src.store import system_control
 
@@ -57,10 +57,8 @@ async def _sum_metrics(since: datetime) -> dict[str, float]:
     }
 
 
-def _format_report(since: datetime, totals: dict[str, float]) -> str:
-    month_label = since.strftime("%Y年%m月")
+def _format_report(totals: dict[str, float]) -> str:
     return (
-        f":bar_chart: {month_label} EduLoop AI 月次レポート\n"
         f"公開記事数: {int(totals['published_count'])}件\n"
         f"インプレッション合計: {int(totals['impressions'])}\n"
         f"プロフィールクリック合計: {int(totals['profile_clicks'])}\n"
@@ -80,9 +78,10 @@ async def run() -> None:
 
     since = _start_of_month()
     totals = await _sum_metrics(since)
-    report = _format_report(since, totals)
+    report = _format_report(totals)
     logger.info("l3_monthly_report", **totals)
-    await slack_notify.send_text(report)
+    month_label = since.strftime("%Y年%m月")
+    await email_notify.send_email(f"[EduLoop AI] {month_label} 月次レポート", report)
 
 
 def main() -> None:
