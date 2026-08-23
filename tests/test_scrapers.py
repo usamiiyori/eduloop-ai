@@ -4,6 +4,7 @@ tests/fixtures/ の固定データと respx によるHTTPモックのみを用�
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -11,8 +12,8 @@ import httpx
 import pytest
 import respx
 
-from src.models.source import SourceConfig
-from src.scrapers import html_diff, pdf, rss
+from src.models.source import FetchType, SourceConfig
+from src.scrapers import html_diff, pdf, rss, runner
 from src.scrapers.base import RobotsDisallowedError, content_hash, fetch_bytes
 from src.scrapers.robots import is_allowed
 
@@ -150,3 +151,33 @@ class TestRobots:
                 allowed = await is_allowed(client, source, "TestAgent")
 
         assert allowed is True
+
+
+class TestRunner:
+    """1ソースが長時間ブロックしても他ソースの収集を止めない（2026-08-23のL1初回実行で
+    DNS異常のあるソースが全体を11分以上停止させた実障害の再発防止）。"""
+
+    async def test_slow_source_times_out_without_blocking_others(self) -> None:
+        slow_source = make_source(id="slow", url="https://slow.test/feed", fetch_type="rss")
+        fast_source = make_source(
+            id="fast", url="https://fast.test/", fetch_type="html_diff"
+        )
+
+        async def slow_fetch(client: httpx.AsyncClient, source: SourceConfig) -> list[object]:
+            await asyncio.sleep(10)
+            return []
+
+        async def fast_fetch(client: httpx.AsyncClient, source: SourceConfig) -> list[object]:
+            return []
+
+        with (
+            patch.dict(
+                runner._DISPATCH,
+                {FetchType.RSS: slow_fetch, FetchType.HTML_DIFF: fast_fetch},
+            ),
+            patch("src.scrapers.runner._SOURCE_TIMEOUT_SECONDS", 0.05),
+        ):
+            result = await runner.run_sources([slow_source, fast_source])
+
+        assert "slow" in result.errors
+        assert "fast" not in result.errors
