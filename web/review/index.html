@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>EduLoop AI 承認画面</title>
+<meta name="robots" content="noindex" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card-bg: #ffffff;
+    --border: #dde1e6;
+    --text: #1f2430;
+    --text-muted: #6b7280;
+    --accent: #2563eb;
+    --ok: #16a34a;
+    --ng: #dc2626;
+    --warn: #d97706;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  header {
+    background: var(--card-bg);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  header h1 { font-size: 18px; margin: 0; }
+  #userbox { font-size: 13px; color: var(--text-muted); display: flex; gap: 12px; align-items: center; }
+  main { max-width: 880px; margin: 24px auto; padding: 0 16px 64px; }
+  #login-view {
+    max-width: 360px;
+    margin: 80px auto;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+  }
+  #login-view h2 { margin-top: 0; font-size: 16px; }
+  label { display: block; font-size: 13px; color: var(--text-muted); margin: 12px 0 4px; }
+  input[type="email"], input[type="password"], textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+  }
+  textarea { resize: vertical; min-height: 60px; }
+  button {
+    font-family: inherit;
+    font-size: 14px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    padding: 8px 14px;
+    cursor: pointer;
+    background: var(--card-bg);
+  }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button.approve { background: var(--ok); color: #fff; border-color: var(--ok); }
+  button.reject { background: var(--ng); color: #fff; border-color: var(--ng); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  #login-submit { width: 100%; margin-top: 16px; }
+  #login-error, .card-error { color: var(--ng); font-size: 13px; margin-top: 8px; white-space: pre-wrap; }
+  .hidden { display: none !important; }
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+  .card-title { font-size: 16px; font-weight: 600; margin: 0 0 4px; }
+  .badge {
+    display: inline-block;
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    margin-right: 6px;
+    background: #eef2ff;
+    color: var(--accent);
+  }
+  .badge.needs-human { background: #fef3c7; color: var(--warn); }
+  .badge.ok { background: #dcfce7; color: var(--ok); }
+  .badge.ng { background: #fee2e2; color: var(--ng); }
+  .meta { font-size: 12px; color: var(--text-muted); }
+  .section { margin-top: 14px; }
+  .section h4 { font-size: 13px; color: var(--text-muted); margin: 0 0 4px; }
+  .section p, .section pre { margin: 0; font-size: 14px; line-height: 1.6; white-space: pre-wrap; }
+  .gates { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .citations li { font-size: 13px; margin-bottom: 4px; }
+  .actions { display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
+  #empty-state, #loading, #no-access {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 60px 0;
+  }
+  dialog {
+    border: none;
+    border-radius: 10px;
+    padding: 24px;
+    max-width: 420px;
+    width: 90%;
+  }
+  dialog::backdrop { background: rgba(0,0,0,.4); }
+  dialog h3 { margin-top: 0; }
+  dialog .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+</style>
+</head>
+<body>
+
+<div id="login-view">
+  <h2>EduLoop AI 承認画面</h2>
+  <p style="font-size:13px;color:var(--text-muted)">レビュー権限を持つアカウントでログインしてください。</p>
+  <label for="login-email">メールアドレス</label>
+  <input id="login-email" type="email" autocomplete="username" />
+  <label for="login-password">パスワード</label>
+  <input id="login-password" type="password" autocomplete="current-password" />
+  <button id="login-submit" class="primary">ログイン</button>
+  <div id="login-error"></div>
+</div>
+
+<div id="app-view" class="hidden">
+  <header>
+    <h1>EduLoop AI 承認画面</h1>
+    <div id="userbox">
+      <span id="user-email"></span>
+      <button id="logout-btn">ログアウト</button>
+    </div>
+  </header>
+  <main>
+    <div id="loading" class="hidden">読み込み中…</div>
+    <div id="no-access" class="hidden">
+      このアカウントには承認権限がありません。<br />
+      オーナーに reviewers テーブルへの登録を依頼してください。
+    </div>
+    <div id="empty-state" class="hidden">現在レビュー待ちの記事はありません。</div>
+    <div id="draft-list"></div>
+  </main>
+</div>
+
+<dialog id="reason-dialog">
+  <h3 id="reason-dialog-title">却下の理由</h3>
+  <textarea id="reason-text" placeholder="理由・修正指示を入力してください"></textarea>
+  <div class="dialog-actions">
+    <button id="reason-cancel">キャンセル</button>
+    <button id="reason-confirm" class="primary">送信</button>
+  </div>
+</dialog>
+
+<script>
+// このURL/キーは公開されて問題ない値です（Supabaseのanon key + Row Level Security で保護されています）。
+const SUPABASE_URL = "https://zcwhbmczbkrjkmwzhstn.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpjd2hibWN6Ymtyamttd3poc3RuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODczNzg1MDQsImV4cCI6MjEwMjk1NDUwNH0.80brx2BmTytE6z_RV1PnPpTX3eXCrahHMf0uZ-J6Dt8";
+
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const loginView = document.getElementById("login-view");
+const appView = document.getElementById("app-view");
+const loginEmail = document.getElementById("login-email");
+const loginPassword = document.getElementById("login-password");
+const loginSubmit = document.getElementById("login-submit");
+const loginError = document.getElementById("login-error");
+const userEmailEl = document.getElementById("user-email");
+const logoutBtn = document.getElementById("logout-btn");
+const loadingEl = document.getElementById("loading");
+const noAccessEl = document.getElementById("no-access");
+const emptyStateEl = document.getElementById("empty-state");
+const draftListEl = document.getElementById("draft-list");
+const reasonDialog = document.getElementById("reason-dialog");
+const reasonDialogTitle = document.getElementById("reason-dialog-title");
+const reasonText = document.getElementById("reason-text");
+const reasonCancel = document.getElementById("reason-cancel");
+const reasonConfirm = document.getElementById("reason-confirm");
+
+const FORMAT_LABEL = {
+  web_article: "Web記事",
+  x_thread: "Xスレッド",
+  youtube_script: "YouTube台本",
+};
+
+const GATE_LABEL = {
+  G1: "G1 事実整合性",
+  G2: "G2 出典・ライセンス",
+  G3: "G3 個人情報",
+  G4: "G4 断定リスク",
+  G5: "G5 重複・既報",
+  G6: "G6 構造",
+};
+
+function escapeHtml(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[c]));
+}
+
+async function init() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    showApp(session);
+  } else {
+    showLogin();
+  }
+}
+
+function showLogin() {
+  loginView.classList.remove("hidden");
+  appView.classList.add("hidden");
+}
+
+async function showApp(session) {
+  loginView.classList.add("hidden");
+  appView.classList.remove("hidden");
+  userEmailEl.textContent = session.user.email ?? "";
+  await loadDrafts();
+}
+
+loginSubmit.addEventListener("click", async () => {
+  loginError.textContent = "";
+  loginSubmit.disabled = true;
+  const { data, error } = await sb.auth.signInWithPassword({
+    email: loginEmail.value.trim(),
+    password: loginPassword.value,
+  });
+  loginSubmit.disabled = false;
+  if (error) {
+    loginError.textContent = "ログインに失敗しました: " + error.message;
+    return;
+  }
+  showApp(data.session);
+});
+
+logoutBtn.addEventListener("click", async () => {
+  await sb.auth.signOut();
+  showLogin();
+});
+
+async function loadDrafts() {
+  loadingEl.classList.remove("hidden");
+  noAccessEl.classList.add("hidden");
+  emptyStateEl.classList.add("hidden");
+  draftListEl.innerHTML = "";
+
+  const { data: drafts, error } = await sb
+    .from("drafts")
+    .select("*")
+    .in("status", ["draft", "needs_human"])
+    .order("created_at", { ascending: true });
+
+  loadingEl.classList.add("hidden");
+
+  if (error) {
+    // RLSで弾かれた場合(reviewers未登録)は空配列ではなくエラーになることがあるため、権限なし扱いにする。
+    noAccessEl.classList.remove("hidden");
+    return;
+  }
+
+  if (!drafts || drafts.length === 0) {
+    emptyStateEl.classList.remove("hidden");
+    return;
+  }
+
+  for (const draft of drafts) {
+    const card = await renderDraftCard(draft);
+    draftListEl.appendChild(card);
+  }
+}
+
+async function renderDraftCard(draft) {
+  const card = document.createElement("div");
+  card.className = "card";
+
+  const [content, gateResults, citations] = await Promise.all([
+    loadContent(draft),
+    loadGateResults(draft.id),
+    loadCitations(draft.citation_ids || []),
+  ]);
+
+  const needsHuman = draft.status === "needs_human";
+
+  card.innerHTML = `
+    <div class="card-head">
+      <div>
+        <p class="card-title">${escapeHtml(content.title || FORMAT_LABEL[draft.format] || draft.format)}</p>
+        <span class="badge">${FORMAT_LABEL[draft.format] || draft.format}</span>
+        ${needsHuman ? '<span class="badge needs-human">要人間レビュー(自己修復3回失敗)</span>' : ""}
+        <span class="meta">スコア合計 ${draft.score_total}（インパクト${draft.score_impact}×速報性${draft.score_timeliness}×論点${draft.score_controversy}）</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <h4>①事実</h4>
+      <p>${escapeHtml(draft.fact)}</p>
+    </div>
+    <div class="section">
+      <h4>②現場への含意</h4>
+      <p>${escapeHtml(draft.implication)}</p>
+    </div>
+    <div class="section">
+      <h4>③まだ決まっていないこと・論点</h4>
+      <p>${escapeHtml(draft.discussion)}</p>
+    </div>
+
+    <div class="section">
+      <h4>本文プレビュー</h4>
+      <pre>${escapeHtml(content.body)}</pre>
+    </div>
+
+    <div class="section">
+      <h4>出典</h4>
+      <ul class="citations">
+        ${citations.length
+          ? citations.map((c) => `<li>${escapeHtml(c.author_or_organization)}「${escapeHtml(c.title)}」<a href="${escapeHtml(c.url)}" target="_blank" rel="noopener">${escapeHtml(c.url)}</a></li>`).join("")
+          : "<li>出典情報なし</li>"}
+      </ul>
+    </div>
+
+    <div class="section">
+      <h4>ハーネス検証結果（直近実行分）</h4>
+      <div class="gates">
+        ${Object.keys(GATE_LABEL).map((g) => {
+          const r = gateResults.find((x) => x.gate === g);
+          if (!r) return `<span class="badge">${GATE_LABEL[g]}: 未実行</span>`;
+          return `<span class="badge ${r.passed ? "ok" : "ng"}">${GATE_LABEL[g]}: ${r.passed ? "OK" : "NG"}</span>`;
+        }).join("")}
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="approve" data-action="approve">承認</button>
+      <button class="reject" data-action="reject">却下</button>
+      <button data-action="revise">修正指示を送る</button>
+    </div>
+    <div class="card-error hidden"></div>
+  `;
+
+  const errorEl = card.querySelector(".card-error");
+
+  card.querySelector('[data-action="approve"]').addEventListener("click", async () => {
+    if (!confirm("この記事を承認しますか？承認すると次回のL2実行タイミングで配信対象になります。")) return;
+    await runAction(errorEl, () => sb.rpc("l2_approve_draft", { p_draft_id: draft.id }));
+  });
+
+  card.querySelector('[data-action="reject"]').addEventListener("click", () => {
+    openReasonDialog("却下の理由", async (reason) => {
+      await runAction(errorEl, () => sb.rpc("l2_reject_draft", { p_draft_id: draft.id, p_reason: reason }));
+    });
+  });
+
+  card.querySelector('[data-action="revise"]').addEventListener("click", () => {
+    openReasonDialog("修正指示の内容", async (instruction) => {
+      await runAction(errorEl, () => sb.rpc("l2_request_revision", { p_draft_id: draft.id, p_instruction: instruction }));
+    });
+  });
+
+  return card;
+}
+
+async function runAction(errorEl, fn) {
+  errorEl.classList.add("hidden");
+  const { error } = await fn();
+  if (error) {
+    errorEl.textContent = "操作に失敗しました: " + error.message;
+    errorEl.classList.remove("hidden");
+    return;
+  }
+  await loadDrafts();
+}
+
+let reasonCallback = null;
+
+function openReasonDialog(title, onConfirm) {
+  reasonDialogTitle.textContent = title;
+  reasonText.value = "";
+  reasonCallback = onConfirm;
+  reasonDialog.showModal();
+}
+
+reasonCancel.addEventListener("click", () => reasonDialog.close());
+reasonConfirm.addEventListener("click", async () => {
+  const text = reasonText.value.trim();
+  if (!text) {
+    alert("理由・指示を入力してください");
+    return;
+  }
+  reasonDialog.close();
+  if (reasonCallback) await reasonCallback(text);
+});
+
+async function loadContent(draft) {
+  if (draft.format === "web_article") {
+    const { data } = await sb.from("web_articles").select("title, body_markdown").eq("draft_id", draft.id).maybeSingle();
+    return { title: data?.title, body: data?.body_markdown || "(本文未生成)" };
+  }
+  if (draft.format === "x_thread") {
+    const { data } = await sb.from("x_thread_posts").select("order_index, text").eq("draft_id", draft.id).order("order_index");
+    const body = (data || []).map((p) => `${p.order_index + 1}. ${p.text}`).join("\n\n");
+    return { title: null, body: body || "(本文未生成)" };
+  }
+  if (draft.format === "youtube_script") {
+    const { data } = await sb.from("youtube_scripts").select("script_text, description_text").eq("draft_id", draft.id).maybeSingle();
+    return { title: null, body: data?.script_text || "(本文未生成)" };
+  }
+  return { title: null, body: "" };
+}
+
+async function loadGateResults(draftId) {
+  const { data: run } = await sb
+    .from("harness_runs")
+    .select("id, attempt")
+    .eq("draft_id", draftId)
+    .order("attempt", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!run) return [];
+  const { data: results } = await sb
+    .from("harness_gate_results")
+    .select("gate, passed, reason")
+    .eq("harness_run_id", run.id);
+  return results || [];
+}
+
+async function loadCitations(citationIds) {
+  if (!citationIds || citationIds.length === 0) return [];
+  const { data } = await sb.from("citations").select("*").in("id", citationIds);
+  return data || [];
+}
+
+init();
+</script>
+</body>
+</html>
