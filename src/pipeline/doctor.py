@@ -6,6 +6,7 @@ CLAUDE.md第0章ルール2「オーナーにトレースバックを読ませな
 from __future__ import annotations
 
 import asyncio
+import sys
 from dataclasses import dataclass
 
 from pydantic import BaseModel
@@ -163,6 +164,11 @@ async def run() -> None:
 
 
 def main() -> None:
+    # Windows PowerShellのコンソール既定エンコーディング(cp932等)では日本語出力が文字化けする
+    # ため、標準出力をUTF-8に固定する（オーナーは非エンジニアであり文字化けを読ませない。
+    # CLAUDE.md第0章ルール2）。
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     asyncio.run(run())
 
 

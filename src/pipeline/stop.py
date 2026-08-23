@@ -9,6 +9,7 @@ docs/運用マニュアル.md にSQLでの再開手順を記載する。
 from __future__ import annotations
 
 import asyncio
+import sys
 
 from src.config import get_settings
 from src.store import system_control
@@ -26,6 +27,8 @@ async def run() -> None:
 
 
 def main() -> None:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     asyncio.run(run())
 
 
