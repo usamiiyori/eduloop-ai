@@ -4,10 +4,10 @@
 
 ## 現在地
 
-**Phase 5 着手中・一時停止中（オーナーからのSupabaseプロジェクト作成待ち）。**
-承認フローはSlack（オーナー選定）に決定。UTM・収益導線・note整形・X下書き・Web公開ロジックは
-実装・テスト済みだが、実際の承認操作を行う「Web承認画面」本体はSupabaseの実プロジェクトが
-ないと実装・検証できないためブロック中。取得手順は `docs/運用マニュアル.md` 参照。
+**Phase 5 完了・停止中（オーナーの指示待ち）。**
+Supabaseプロジェクトを作成し、GitHubリポジトリ（https://github.com/usamiiyori/eduloop-ai ,
+Public）を新規作成してpush、GitHub Pagesで公開したWeb承認画面から実データでの
+承認操作・RLS・監査ログ記録まで動作確認済み。次はPhase 6（自動運用と計測）。
 
 ## 解決済みの判断事項
 
@@ -69,8 +69,12 @@
       Phase6に先送り、実装前にオーナーの課金設定確認が必要なため）
 - [x] Web記事「公開」ロジック（承認済み(approved)以外は例外で拒否。実際のDB永続化は
       Supabase接続後に差し替え可能な設計）
-- [ ] **Web承認画面本体**（Supabaseプロジェクト未作成のためブロック中。下記参照）
-- → オーナーからのSupabaseプロジェクト作成後に画面実装・報告を完了する
+- [x] **Web承認画面本体**（GitHub Pages + Supabase Auth直結の静的ページ。
+      `web/review/index.html`。承認/却下/修正指示は生UPDATEではなく
+      SECURITY DEFINER関数（`sql/0002_l2_review_queue.sql`）経由に限定し、
+      audit_logへの記録を同一トランザクションで保証。reviewersテーブルで
+      承認権限者を管理。実データでの承認操作・監査ログ記録まで動作確認済み）
+- → 停止・報告済み
 
 ## Phase 6 — 自動運用と計測
 
